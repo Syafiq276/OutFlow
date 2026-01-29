@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/biometric_service.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -14,9 +15,40 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _authService = AuthService();
+  final _biometricService = BiometricService();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _biometricAvailable = false;
+  bool _biometricEnabled = false;
   String? _errorMessage;
+  String _biometricName = 'Biometric';
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBiometricAvailability();
+  }
+
+  Future<void> _checkBiometricAvailability() async {
+    final canUseBio = await _biometricService.canUseBiometrics();
+    final isBioEnabled = await _biometricService.isBiometricEnabled();
+    final bioName = await _biometricService.getBiometricName();
+
+    setState(() {
+      _biometricAvailable = canUseBio;
+      _biometricEnabled = isBioEnabled;
+      _biometricName = bioName;
+    });
+
+    // If biometric is enabled and available, try to use it
+    if (_biometricAvailable && _biometricEnabled) {
+      // Auto-try biometric on screen load if enabled
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) {
+        _loginWithBiometric();
+      }
+    }
+  }
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
@@ -40,9 +72,90 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(error), backgroundColor: Colors.red),
         );
+      } else {
+        // Login successful - optionally save for biometric
+        if (_biometricAvailable && !_biometricEnabled) {
+          _showBiometricSetupDialog();
+        }
       }
       // If no error, the auth state change will navigate automatically
     }
+  }
+
+  Future<void> _loginWithBiometric() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final authenticated = await _biometricService.authenticate();
+
+      if (authenticated && mounted) {
+        final email = await _biometricService.getBiometricEmail();
+        if (email != null) {
+          // Email verified via biometric, proceed to dashboard
+          // The auth state will handle navigation
+          setState(() => _isLoading = false);
+        } else {
+          if (mounted) {
+            setState(() => _isLoading = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Biometric credential not found. Please login manually.'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        }
+      } else if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Biometric error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showBiometricSetupDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Enable Biometric Login?'),
+        content: Text(
+          'Would you like to enable $biometricName authentication for faster login?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Not Now'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await _biometricService.saveBiometricCredentials(
+                _emailController.text.trim(),
+                _passwordController.text,
+              );
+              if (mounted) {
+                setState(() => _biometricEnabled = true);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('$_biometricName login enabled!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            child: const Text('Enable'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _navigateToSignUp() {
@@ -177,6 +290,38 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
                 const SizedBox(height: 24),
+
+                // Biometric Login Button (if available)
+                if (_biometricAvailable)
+                  Column(
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _isLoading ? null : _loginWithBiometric,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: const BorderSide(color: Colors.teal),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        icon: Icon(
+                          _biometricName == 'Face'
+                              ? Icons.face
+                              : Icons.fingerprint,
+                          color: Colors.teal,
+                        ),
+                        label: Text(
+                          'Login with $_biometricName',
+                          style: const TextStyle(
+                            color: Colors.teal,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
 
                 // Login Button
                 ElevatedButton(
