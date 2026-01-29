@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../models/subscription_model.dart';
 import '../services/subscription_service.dart';
 import '../services/auth_service.dart';
@@ -125,6 +126,101 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (ctx) => const AddSubscriptionScreen()),
+    );
+  }
+
+  // Calculate spending by category
+  Map<String, double> _getSpendingByCategory(List<Subscription> subscriptions) {
+    final spendingMap = <String, double>{};
+    for (final sub in subscriptions.where((s) => s.isActive)) {
+      final key = sub.category;
+      spendingMap[key] = (spendingMap[key] ?? 0) + sub.monthlyCost;
+    }
+    return spendingMap;
+  }
+
+  // Get colors for pie chart
+  List<Color> _getCategoryColors() {
+    return [
+      const Color(0xFF008B8B), // Teal
+      const Color(0xFF20B2AA), // Light Sea Green
+      const Color(0xFF48D1CC), // Medium Turquoise
+      const Color(0xFF7FFFD4), // Aquamarine
+      const Color(0xFF00CED1), // Dark Turquoise
+      const Color(0xFF5F9EA0), // Cadet Blue
+    ];
+  }
+
+  // Build the expense breakdown pie chart
+  Widget _buildExpenseChart(List<Subscription> subscriptions) {
+    final spendingMap = _getSpendingByCategory(subscriptions);
+
+    if (spendingMap.isEmpty) {
+      return const Center(child: Text('No active subscriptions'));
+    }
+
+    final colors = _getCategoryColors();
+    final pieSections = <PieChartSectionData>[];
+    final entries = spendingMap.entries.toList();
+
+    for (int i = 0; i < entries.length; i++) {
+      final entry = entries[i];
+      pieSections.add(
+        PieChartSectionData(
+          value: entry.value,
+          color: colors[i % colors.length],
+          title: '${entry.value.toStringAsFixed(0)}',
+          radius: 60,
+          titleStyle: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 250,
+          child: PieChart(
+            PieChartData(sections: pieSections),
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Legend
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: entries.asMap().entries.map((e) {
+            final index = e.key;
+            final entry = e.value;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: colors[index % colors.length],
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(entry.key),
+                  ),
+                  Text(
+                    'RM ${entry.value.toStringAsFixed(2)}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 
@@ -258,6 +354,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   },
                 ),
               ),
+
+              // Expense Breakdown Pie Chart
+              if (subscriptions.isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withAlpha(51),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Spending by Category',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildExpenseChart(subscriptions),
+                    ],
+                  ),
+                ),
 
               // Search & Filter
               Padding(
