@@ -25,7 +25,7 @@ class BiometricService {
   // Check if device has biometric enrolled
   Future<bool> deviceSupportsDeviceCredential() async {
     try {
-      return await _auth.deviceSupportsBiometrics;
+      return await _auth.isDeviceSupported();
     } catch (e) {
       return false;
     }
@@ -55,7 +55,7 @@ class BiometricService {
       // This is a basic example - DO NOT use for sensitive data in production
       await prefs.setString('biometric_email', email);
       await prefs.setBool('biometric_enabled', true);
-      
+
       // In production, encrypt the password using flutter_secure_storage
       // For now, we'll rely on Firebase to validate the email
     } catch (e) {

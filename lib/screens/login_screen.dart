@@ -99,7 +99,9 @@ class _LoginScreenState extends State<LoginScreen> {
             setState(() => _isLoading = false);
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Biometric credential not found. Please login manually.'),
+                content: Text(
+                  'Biometric credential not found. Please login manually.',
+                ),
                 backgroundColor: Colors.orange,
               ),
             );
@@ -127,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Enable Biometric Login?'),
         content: Text(
-          'Would you like to enable $biometricName authentication for faster login?',
+          'Would you like to enable $_biometricName authentication for faster login?',
         ),
         actions: [
           TextButton(
