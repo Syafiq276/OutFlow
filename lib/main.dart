@@ -1,16 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
+import 'package:provider/provider.dart';
+import 'services/settings_service.dart';
 import 'services/auth_service.dart';
-import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/email_verification_screen.dart';
+import 'firebase_options.dart';
 import 'main_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const OutflowApp());
+  
+  final settingsService = SettingsService();
+  await settingsService.init();
+
+  runApp(
+    ChangeNotifierProvider.value(
+      value: settingsService,
+      child: const OutflowApp(),
+    ),
+  );
 }
 
 class OutflowApp extends StatelessWidget {
@@ -18,9 +28,12 @@ class OutflowApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsService>();
+    
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Outflow',
+      themeMode: settings.themeMode,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF00796B),
@@ -109,6 +122,51 @@ class OutflowApp extends StatelessWidget {
           ),
           color: Colors.white,
           margin: EdgeInsets.zero,
+        ),
+      ),
+      darkTheme: ThemeData.dark().copyWith(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF00796B),
+          brightness: Brightness.dark,
+          primary: const Color(0xFF80CBC4), // Lighter teal for dark mode
+          secondary: const Color(0xFF4DB6AC),
+          surface: const Color(0xFF1E1E1E),
+          background: const Color(0xFF121212),
+        ),
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+          titleTextStyle: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+          iconTheme: IconThemeData(color: Colors.white),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: const Color(0xFF2C2C2C),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          hintStyle: TextStyle(color: Colors.grey[600]),
+        ),
+        cardTheme: const CardThemeData(
+          color: Color(0xFF1E1E1E),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(16)),
+            side: BorderSide(color: Color(0xFF333333)),
+          ),
+        ),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: Color(0xFF1E1E1E),
+          selectedItemColor: Color(0xFF80CBC4),
+          unselectedItemColor: Colors.grey,
         ),
       ),
       home: const AuthWrapper(),

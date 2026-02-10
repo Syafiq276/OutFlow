@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/subscription_model.dart';
 import '../services/subscription_service.dart';
+import '../services/settings_service.dart';
+import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 
 class EditSubscriptionScreen extends StatefulWidget {
@@ -102,6 +104,35 @@ class _EditSubscriptionScreenState extends State<EditSubscriptionScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // HERO LOGO
+              Center(
+                child: Hero(
+                  tag: 'subscription_logo_${widget.subscription.id}',
+                  child: Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: widget.subscription.logoPath != null ? Colors.transparent : Colors.teal.shade100,
+                      shape: BoxShape.circle,
+                      image: widget.subscription.logoPath != null
+                          ? DecorationImage(
+                              image: AssetImage(widget.subscription.logoPath!),
+                              fit: BoxFit.contain,
+                            )
+                          : null,
+                    ),
+                    alignment: Alignment.center,
+                    child: widget.subscription.logoPath == null
+                        ? Text(
+                            widget.subscription.name.isNotEmpty ? widget.subscription.name[0].toUpperCase() : '?',
+                            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.teal),
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
               // NAME INPUT
               TextFormField(
                 controller: _nameController,
@@ -124,9 +155,9 @@ class _EditSubscriptionScreenState extends State<EditSubscriptionScreen> {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                decoration: const InputDecoration(
-                  labelText: 'Cost (RM)',
-                  prefixText: 'RM ',
+                decoration: InputDecoration(
+                  labelText: 'Cost (${Provider.of<SettingsService>(context, listen: false).currencySymbol})',
+                  prefixText: '${Provider.of<SettingsService>(context, listen: false).currencySymbol} ',
                 ),
                 validator: (val) {
                   if (val == null || val.isEmpty) {

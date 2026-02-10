@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 import 'models/subscription_model.dart';
 import 'services/subscription_service.dart';
 import 'services/auth_service.dart';
+import 'services/settings_service.dart';
+import 'package:provider/provider.dart';
 
 class AddSubscriptionScreen extends StatefulWidget {
   const AddSubscriptionScreen({super.key});
@@ -310,8 +312,8 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
                         TextFormField(
                           controller: _costController,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(
-                            prefixText: "RM ",
+                          decoration: InputDecoration(
+                            prefixText: "${Provider.of<SettingsService>(context, listen: false).currencySymbol} ",
                             hintText: "0.00",
                           ),
                           validator: (val) {

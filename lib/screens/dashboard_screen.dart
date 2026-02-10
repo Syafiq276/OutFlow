@@ -5,6 +5,8 @@ import 'package:fl_chart/fl_chart.dart';
 import '../models/subscription_model.dart';
 import '../services/subscription_service.dart';
 import '../services/auth_service.dart';
+import '../services/settings_service.dart';
+import 'package:provider/provider.dart';
 import '../add_subscription_screen.dart';
 import 'edit_subscription_screen.dart';
 import 'login_screen.dart';
@@ -170,10 +172,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
              const Text('Top', style: TextStyle(color: Colors.grey, fontSize: 12)),
              Text(
                topCategory,
-               style: const TextStyle(
+               style: TextStyle(
                  fontWeight: FontWeight.bold,
                  fontSize: 16,
-                 color: Colors.black87
+                 color: Theme.of(context).textTheme.bodyLarge?.color,
                ),
              ),
           ],
@@ -203,10 +205,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                  ),
                ),
                const SizedBox(width: 8),
-               Expanded(
-                 child: Text(e.key, style: const TextStyle(color: Colors.grey)),
-               ),
-               Text('$percent%', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Expanded(
+                  child: Text(e.key, style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey)),
+                ),
+                Text('$percent%', style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
              ],
            ),
          );
@@ -217,10 +219,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final userId = _authService.currentUser?.uid ?? '';
+    final currency = Provider.of<SettingsService>(context).currencySymbol;
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FE), // Very light cool grey
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         title: Row(
           children: [
@@ -233,7 +236,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                child: const Icon(Icons.wallet, color: Colors.white, size: 20),
              ),
              const SizedBox(width: 8),
-             const Text('Outflow', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+             Text('Outflow', style: TextStyle(color: Theme.of(context).appBarTheme.foregroundColor, fontWeight: FontWeight.bold)),
           ],
         ),
         actions: [
@@ -249,10 +252,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
           }
 
           if (snapshot.hasError) {
-             return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          final subscriptions = snapshot.data ?? [];
+
+          if (subscriptions.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.subscriptions_outlined, size: 80, color: Colors.grey[300]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No subscriptions yet',
+                    style: TextStyle(color: Colors.grey[500], fontSize: 18),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AddSubscriptionScreen()),
+                      );
+                    },
+                    child: const Text('Add your first subscription'),
+                  ),
+                ],
+              ),
+            );
           }
 
-          final subscriptions = snapshot.data ?? [];
           final filteredSubscriptions = subscriptions.where((sub) {
              return (_selectedCategory == 'All' || sub.category == _selectedCategory) && sub.isActive;
           }).toList();
@@ -315,7 +344,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             textBaseline: TextBaseline.alphabetic,
                             children: [
                               const Text(
-                                'RM ', // Using RM
+                                '$currency ', 
                                 style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
                               ),
                               Text(
@@ -386,7 +415,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).cardTheme.color,
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: Column(
@@ -436,7 +465,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                          padding: const EdgeInsets.only(right: 8),
                          child: ActionChip(
                            label: Text(cat),
-                           backgroundColor: isSelected ? const Color(0xFF00796B) : Colors.white,
+                           backgroundColor: isSelected ? const Color(0xFF00796B) : Theme.of(context).cardTheme.color,
                            labelStyle: TextStyle(
                              color: isSelected ? Colors.white : Colors.grey[600],
                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -458,10 +487,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Subscriptions',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
+                     Text(
+                       'Subscriptions',
+                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color),
+                     ),
                     TextButton(
                       onPressed: () {},
                       child: const Text('See All', style: TextStyle(color: Color(0xFF00796B))),
@@ -469,6 +498,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
                 
+                if (filteredSubscriptions.isEmpty)
+                   const Padding(
+                     padding: EdgeInsets.all(32),
+                     child: Center(child: Text('No subscriptions in this category')),
+                   )
+                else
                 ListView.separated(
                   physics: const NeverScrollableScrollPhysics(),
                   shrinkWrap: true,
@@ -478,35 +513,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     final sub = filteredSubscriptions[index];
                     return Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).cardTheme.color,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: Colors.grey.shade100),
                       ),
                       child: ListTile(
                         contentPadding: const EdgeInsets.all(16),
-                        leading: Container(
-                           width: 50, height: 50,
-                           decoration: BoxDecoration(
-                             color: sub.logoPath != null ? Colors.transparent : Colors.black, // Transparent if logo exists
-                             shape: BoxShape.circle,
-                             image: sub.logoPath != null
-                                 ? DecorationImage(
-                                     image: AssetImage(sub.logoPath!),
-                                     fit: BoxFit.contain,
+                        leading: Hero(
+                          tag: 'subscription_logo_${sub.id}',
+                          child: Container(
+                             width: 50, height: 50,
+                             decoration: BoxDecoration(
+                               color: sub.logoPath != null ? Colors.transparent : Colors.black, // Transparent if logo exists
+                               shape: BoxShape.circle,
+                               image: sub.logoPath != null
+                                   ? DecorationImage(
+                                       image: AssetImage(sub.logoPath!),
+                                       fit: BoxFit.contain,
+                                     )
+                                   : null,
+                             ),
+                             alignment: Alignment.center,
+                             child: sub.logoPath == null
+                                 ? Text(
+                                     sub.name.isNotEmpty ? sub.name[0].toUpperCase() : '?',
+                                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                                    )
                                  : null,
-                           ),
-                           alignment: Alignment.center,
-                           child: sub.logoPath == null
-                               ? Text(
-                                   sub.name.isNotEmpty ? sub.name[0].toUpperCase() : '?',
-                                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                 )
-                               : null,
+                          ),
                         ),
                         title: Text(
                           sub.name,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Theme.of(context).textTheme.bodyLarge?.color),
                         ),
                         subtitle: Text(
                            '${sub.period} • Next: ${DateFormat('MMM dd').format(sub.nextBillingDate)}',
@@ -517,8 +555,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              'RM ${sub.cost.toStringAsFixed(2)}',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              '$currency ${sub.cost.toStringAsFixed(2)}',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Theme.of(context).textTheme.bodyLarge?.color),
                             ),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

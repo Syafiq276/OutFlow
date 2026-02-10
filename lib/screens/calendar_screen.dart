@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../models/subscription_model.dart';
 import '../services/subscription_service.dart';
 import '../services/auth_service.dart';
+import '../services/settings_service.dart';
+import 'package:provider/provider.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -40,9 +42,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final userId = _authService.currentUser?.uid ?? '';
     
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FE),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Calendar', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: Text('Calendar', style: TextStyle(color: Theme.of(context).appBarTheme.foregroundColor, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
@@ -60,7 +62,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               Container(
                 margin: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardTheme.color,
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: TableCalendar(
@@ -97,10 +99,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       shape: BoxShape.circle,
                     ),
                   ),
-                  headerStyle: const HeaderStyle(
+                  headerStyle: HeaderStyle(
                     formatButtonVisible: false,
                     titleCentered: true,
-                    titleTextStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    titleTextStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Theme.of(context).textTheme.bodyLarge?.color),
                   ),
                 ),
               ),
@@ -113,7 +115,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     children: [
                       Text(
                         'Due on ${DateFormat('MMMM d').format(_selectedDay!)}',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color),
                       ),
                       const SizedBox(height: 16),
                       Expanded(
@@ -123,7 +125,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               margin: const EdgeInsets.only(bottom: 12),
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: Theme.of(context).cardTheme.color,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(color: Colors.grey.shade100),
                               ),
@@ -143,7 +145,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                      ),
                                      alignment: Alignment.center,
                                      child: sub.logoPath == null
-                                         ? Text(sub.name.isNotEmpty ? sub.name[0] : '?', style: const TextStyle(fontWeight: FontWeight.bold))
+                                         ? Text(sub.name.isNotEmpty ? sub.name[0] : '?', style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color))
                                          : null,
                                   ),
                                   const SizedBox(width: 12),
@@ -151,14 +153,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(sub.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                        Text(sub.name, style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
                                         Text(sub.category, style: TextStyle(color: Colors.grey[500], fontSize: 12)),
                                       ],
                                     ),
                                   ),
                                   Text(
-                                    'RM ${sub.cost.toStringAsFixed(2)}',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                    '${Provider.of<SettingsService>(context).currencySymbol} ${sub.cost.toStringAsFixed(2)}',
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Theme.of(context).textTheme.bodyLarge?.color),
                                   ),
                                 ],
                               ),

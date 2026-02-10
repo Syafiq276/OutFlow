@@ -3,6 +3,8 @@ import 'package:fl_chart/fl_chart.dart';
 import '../models/subscription_model.dart';
 import '../services/subscription_service.dart';
 import '../services/auth_service.dart';
+import '../services/settings_service.dart';
+import 'package:provider/provider.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -19,15 +21,17 @@ class _StatsScreenState extends State<StatsScreen> {
   @override
   Widget build(BuildContext context) {
     final userId = _authService.currentUser?.uid ?? '';
+    final settings = context.watch<SettingsService>();
+    final currency = settings.currencySymbol;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FE),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
+        title: Text(
           'Statistics',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Theme.of(context).appBarTheme.foregroundColor, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
@@ -46,7 +50,7 @@ class _StatsScreenState extends State<StatsScreen> {
             child: Column(
               children: [
                 // 1. Total Spending Card
-                _buildTotalSpendingCard(totalMonthly),
+                _buildTotalSpendingCard(totalMonthly, currency),
                 const SizedBox(height: 20),
 
                 // 2. Chart Card
@@ -54,7 +58,7 @@ class _StatsScreenState extends State<StatsScreen> {
                 const SizedBox(height: 20),
 
                 // 3. Category Breakdown
-                _buildCategoryBreakdown(categorySpending, totalMonthly),
+                _buildCategoryBreakdown(categorySpending, totalMonthly, currency),
                 const SizedBox(height: 20),
               ],
             ),
@@ -64,7 +68,7 @@ class _StatsScreenState extends State<StatsScreen> {
     );
   }
 
-  Widget _buildTotalSpendingCard(double total) {
+  Widget _buildTotalSpendingCard(double total, String currency) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -87,7 +91,7 @@ class _StatsScreenState extends State<StatsScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'RM ${total.toStringAsFixed(2)}',
+            '$currency ${total.toStringAsFixed(2)}',
             style: const TextStyle(
               fontSize: 36,
               fontWeight: FontWeight.bold,
@@ -115,7 +119,7 @@ class _StatsScreenState extends State<StatsScreen> {
      return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -192,7 +196,7 @@ class _StatsScreenState extends State<StatsScreen> {
                     barRods: [
                       BarChartRodData(
                         toY: (totalMonthly / 7) + (index % 2 == 0 ? 20 : -10), 
-                        color: index == 3 ? const Color(0xFF00796B) : const Color(0xFFE0F2F1),
+                        color: index == 3 ? const Color(0xFF00796B) : Theme.of(context).dividerColor,
                         width: 16,
                         borderRadius: BorderRadius.circular(8),
                       )
@@ -207,7 +211,7 @@ class _StatsScreenState extends State<StatsScreen> {
     );
   }
 
-  Widget _buildCategoryBreakdown(Map<String, double> categorySpending, double totalMonthly) {
+  Widget _buildCategoryBreakdown(Map<String, double> categorySpending, double totalMonthly, String currency) {
      return Column(
        crossAxisAlignment: CrossAxisAlignment.start,
        children: [
@@ -229,7 +233,7 @@ class _StatsScreenState extends State<StatsScreen> {
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardTheme.color,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.grey.shade100),
               ),
@@ -250,11 +254,11 @@ class _StatsScreenState extends State<StatsScreen> {
                       children: [
                          Row(
                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                           children: [
-                             Text(category, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                             children: [
+                             Text(category, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Theme.of(context).textTheme.bodyLarge?.color)),
                              Text(
-                               'RM ${amount.toStringAsFixed(2)}', 
-                               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
+                                '$currency ${amount.toStringAsFixed(2)}', 
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Theme.of(context).textTheme.bodyLarge?.color)
                              ),
                            ],
                          ),
