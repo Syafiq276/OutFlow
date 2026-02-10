@@ -343,9 +343,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             crossAxisAlignment: CrossAxisAlignment.baseline,
                             textBaseline: TextBaseline.alphabetic,
                             children: [
-                              const Text(
+                              Text(
                                 '$currency ', 
-                                style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+                                style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
                               ),
                               Text(
                                 parts[0],
