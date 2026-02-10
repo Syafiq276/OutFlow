@@ -5,6 +5,7 @@ import 'services/auth_service.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/email_verification_screen.dart';
+import 'main_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -136,7 +137,7 @@ class AuthWrapper extends StatelessWidget {
         if (snapshot.hasData) {
           // Check if email is verified
           if (authService.isEmailVerified) {
-            return const DashboardScreen();
+            return const MainScreen();
           } else {
             // Email not verified - show verification screen
             return EmailVerificationScreen(email: snapshot.data?.email ?? '');

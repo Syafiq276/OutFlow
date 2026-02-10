@@ -19,9 +19,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final SubscriptionService _service = SubscriptionService();
   final AuthService _authService = AuthService();
-  // final TextEditingController _searchController = TextEditingController(); // Search moved to new design if needed, but design doesn't show it explicitly in top view. keeping it clean for now or adding a filter button.
-  // Design shows "All", "Entertainment", "Utilities" pills.
-
+  
   String _selectedCategory = 'All';
   List<String> _categories = ['All'];
 
@@ -29,38 +27,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _loadCategories();
-  }
-
-  Future<void> _logout() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm ?? false) {
-      await _authService.signOut();
-      if (mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (ctx) => const LoginScreen()),
-          (route) => false,
-        );
-      }
-    }
   }
 
   Future<void> _loadCategories() async {
@@ -121,13 +87,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       MaterialPageRoute(
         builder: (ctx) => EditSubscriptionScreen(subscription: subscription),
       ),
-    );
-  }
-
-  void _navigateToAdd() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (ctx) => const AddSubscriptionScreen()),
     );
   }
 
@@ -279,7 +238,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         actions: [
           IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none, color: Colors.grey)),
-          IconButton(onPressed: _logout, icon: const Icon(Icons.logout, color: Colors.grey)), // Changed from Profile to Logout for now
+          // Logout removed
         ],
       ),
       body: StreamBuilder<List<Subscription>>(
@@ -356,7 +315,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             textBaseline: TextBaseline.alphabetic,
                             children: [
                               const Text(
-                                '\$', // Using $ as per image, but could be RM
+                                'RM ', // Using RM
                                 style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
                               ),
                               Text(
@@ -527,15 +486,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         contentPadding: const EdgeInsets.all(16),
                         leading: Container(
                            width: 50, height: 50,
-                           decoration: const BoxDecoration(
-                             color: Colors.black, // Placeholder logo bg
+                           decoration: BoxDecoration(
+                             color: sub.logoPath != null ? Colors.transparent : Colors.black, // Transparent if logo exists
                              shape: BoxShape.circle,
+                             image: sub.logoPath != null
+                                 ? DecorationImage(
+                                     image: AssetImage(sub.logoPath!),
+                                     fit: BoxFit.contain,
+                                   )
+                                 : null,
                            ),
                            alignment: Alignment.center,
-                           child: Text(
-                             sub.name[0].toUpperCase(),
-                             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                           ),
+                           child: sub.logoPath == null
+                               ? Text(
+                                   sub.name.isNotEmpty ? sub.name[0].toUpperCase() : '?',
+                                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                 )
+                               : null,
                         ),
                         title: Text(
                           sub.name,
@@ -550,7 +517,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              '\$${sub.cost.toStringAsFixed(2)}',
+                              'RM ${sub.cost.toStringAsFixed(2)}',
                               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                             ),
                             Container(
@@ -582,39 +549,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
         },
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF00796B),
-        unselectedItemColor: Colors.grey,
-        showSelectedLabels: true,
-        showUnselectedLabels: true,
-        currentIndex: 0, // Mock active tab
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.pie_chart_outline), label: 'Stats'),
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: 'Calendar'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Settings'),
-        ],
-      ),
-      floatingActionButton: Container(
-        height: 65, width: 65,
-        decoration: BoxDecoration(
-          color: const Color(0xFF00796B),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-             BoxShadow(
-               color: const Color(0xFF00796B).withValues(alpha: 0.4),
-               blurRadius: 10,
-               offset: const Offset(0, 4),
-             ),
-          ],
-        ),
-        child: IconButton(
-          icon: const Icon(Icons.add, color: Colors.white, size: 30),
-          onPressed: _navigateToAdd,
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 

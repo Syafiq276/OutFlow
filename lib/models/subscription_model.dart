@@ -9,6 +9,7 @@ class Subscription {
   final String category;
   final DateTime nextBillingDate;
   final bool isActive;
+  final String? logoPath;
 
   Subscription({
     this.id,
@@ -19,6 +20,7 @@ class Subscription {
     required this.category,
     required this.nextBillingDate,
     this.isActive = true,
+    this.logoPath,
   });
 
   factory Subscription.fromDocument(DocumentSnapshot doc) {
@@ -32,6 +34,7 @@ class Subscription {
       category: data['category'] ?? '',
       nextBillingDate: (data['nextBillingDate'] as Timestamp).toDate(),
       isActive: data['isActive'] ?? true,
+      logoPath: data['logoPath'],
     );
   }
 
@@ -44,6 +47,7 @@ class Subscription {
       'category': category,
       'nextBillingDate': Timestamp.fromDate(nextBillingDate),
       'isActive': isActive,
+      'logoPath': logoPath,
     };
   }
 

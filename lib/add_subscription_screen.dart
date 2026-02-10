@@ -21,6 +21,31 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
 
   String _selectedCategory = "Entertainment";
   String _selectedPeriod = "month";
+  String? _selectedLogoPath;
+
+  // Available logos
+  final List<String> _availableLogos = [
+    'assets/logos/ASB.png',
+    'assets/logos/Atome.png',
+    'assets/logos/Bank Islam.png',
+    'assets/logos/Coway.png',
+    'assets/logos/Cuckoo.png',
+    'assets/logos/Indah water.png',
+    'assets/logos/Maybank.png',
+    'assets/logos/ShopeePay.png',
+    'assets/logos/Spotify.png',
+    'assets/logos/TM.png',
+    'assets/logos/TNB.png',
+    'assets/logos/TNG.png',
+    'assets/logos/Umobile.png',
+    'assets/logos/Unifi.png',
+    'assets/logos/celcomdigi.png',
+    'assets/logos/grabpay.png',
+    'assets/logos/maxis.png',
+    'assets/logos/netflix.png',
+    'assets/logos/youtube.png',
+  ];
+
   DateTime _nextBillingDate = DateTime.now();
   bool _isLoading = false;
 
@@ -30,6 +55,7 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
   final List<String> _categories = [
     "Entertainment",
     "Utilities",
+    "Finance",
     "Work",
     "Personal",
     "Other",
@@ -42,6 +68,60 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
     {'name': 'Dropbox', 'icon': Icons.cloud},
     {'name': 'Youtube', 'icon': Icons.play_circle_filled},
   ];
+
+  // --- LOGO PICKER FUNCTION ---
+  void _showLogoPicker() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          height: 400,
+          child: Column(
+            children: [
+              const Text(
+                "Select a Logo",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
+                  itemCount: _availableLogos.length,
+                  itemBuilder: (context, index) {
+                    final logoPath = _availableLogos[index];
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() => _selectedLogoPath = logoPath);
+                        Navigator.pop(context);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade200),
+                          borderRadius: BorderRadius.circular(12),
+                          image: DecorationImage(
+                            image: AssetImage(logoPath),
+                            fit: BoxFit.contain, // Changed to contain to avoid cropping
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   // --- DATE PICKER FUNCTION ---
   Future<void> _pickDate() async {
@@ -80,9 +160,7 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
         period: _selectedPeriod,
         category: _selectedCategory,
         nextBillingDate: _nextBillingDate,
-        // notes: _notesController.text, // Assuming model has notes, if not it will just be ignored or I need to update model.
-        // Checking model... View file 10 shows models dir. I'll assume standard model for now, if notes missing I'll add or ignore.
-        // Based on previous code, Subscription model didn't have notes explicitly used in UI, but I'll add the field to UI.
+        logoPath: _selectedLogoPath,
       );
 
       await _service.addSubscription(newSub);
@@ -136,6 +214,7 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
                  _selectedCategory = "Entertainment";
                  _selectedPeriod = "month";
                  _nextBillingDate = DateTime.now();
+                 _selectedLogoPath = null;
                });
             },
           ),
@@ -151,40 +230,51 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
               // 1. Logo Placeholder
               Align(
                 alignment: Alignment.center,
-                child: Stack(
-                  children: [
-                     Container(
-                       width: 100,
-                       height: 100,
-                       decoration: BoxDecoration(
-                         color: Colors.grey[200],
-                         borderRadius: BorderRadius.circular(30),
-                       ),
-                       child: const Icon(Icons.camera_alt, color: Colors.grey, size: 40),
-                     ),
-                     Positioned(
-                       bottom: 0,
-                       right: 0,
-                       child: Container(
-                         padding: const EdgeInsets.all(4),
-                         decoration: const BoxDecoration(
-                           color: Color(0xFF00796B),
-                           shape: BoxShape.circle,
-                           boxShadow: [
-                             BoxShadow(color: Colors.white, spreadRadius: 2),
-                           ],
+                child: GestureDetector(
+                  onTap: _showLogoPicker,
+                  child: Stack(
+                    children: [
+                       Container(
+                         width: 100,
+                         height: 100,
+                         decoration: BoxDecoration(
+                           color: Colors.grey[200],
+                           borderRadius: BorderRadius.circular(30),
+                           image: _selectedLogoPath != null
+                               ? DecorationImage(
+                                   image: AssetImage(_selectedLogoPath!),
+                                   fit: BoxFit.contain, // contain to match picker
+                                 )
+                               : null,
                          ),
-                         child: const Icon(Icons.add, color: Colors.white, size: 20),
+                         child: _selectedLogoPath == null
+                             ? const Icon(Icons.camera_alt, color: Colors.grey, size: 40)
+                             : null,
                        ),
-                     ),
-                  ],
+                       Positioned(
+                         bottom: 0,
+                         right: 0,
+                         child: Container(
+                           padding: const EdgeInsets.all(4),
+                           decoration: const BoxDecoration(
+                             color: Color(0xFF00796B),
+                             shape: BoxShape.circle,
+                             boxShadow: [
+                               BoxShadow(color: Colors.white, spreadRadius: 2),
+                             ],
+                           ),
+                           child: const Icon(Icons.edit, color: Colors.white, size: 20), // Changed from add to edit
+                         ),
+                       ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Tap to add logo',
+              Text(
+                _selectedLogoPath != null ? 'Tap to change logo' : 'Tap to select logo',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey, fontSize: 12),
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
               ),
               const SizedBox(height: 32),
 
@@ -221,7 +311,7 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
                           controller: _costController,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           decoration: const InputDecoration(
-                            prefixText: "\$ ",
+                            prefixText: "RM ",
                             hintText: "0.00",
                           ),
                           validator: (val) {
