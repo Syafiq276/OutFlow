@@ -19,7 +19,9 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final SubscriptionService _service = SubscriptionService();
   final AuthService _authService = AuthService();
-  final TextEditingController _searchController = TextEditingController();
+  // final TextEditingController _searchController = TextEditingController(); // Search moved to new design if needed, but design doesn't show it explicitly in top view. keeping it clean for now or adding a filter button.
+  // Design shows "All", "Entertainment", "Utilities" pills.
+
   String _selectedCategory = 'All';
   List<String> _categories = ['All'];
 
@@ -140,15 +142,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // Get colors for pie chart
-  List<Color> _getCategoryColors() {
-    return [
-      const Color(0xFF008B8B), // Teal
-      const Color(0xFF20B2AA), // Light Sea Green
-      const Color(0xFF48D1CC), // Medium Turquoise
-      const Color(0xFF7FFFD4), // Aquamarine
-      const Color(0xFF00CED1), // Dark Turquoise
-      const Color(0xFF5F9EA0), // Cadet Blue
-    ];
+  Color _getCategoryColor(String category) {
+     switch (category) {
+       case 'Entertainment': return const Color(0xFF009688); // Teal
+       case 'Utilities': return const Color(0xFF4DB6AC); // Lighter Teal
+       case 'Work': return const Color(0xFF80CBC4);
+       case 'Personal': return const Color(0xFFB2DFDB);
+       default: return const Color(0xFFE0F2F1);
+     }
   }
 
   // Build the expense breakdown pie chart
@@ -159,84 +160,126 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return const Center(child: Text('No active subscriptions'));
     }
 
-    final colors = _getCategoryColors();
     final pieSections = <PieChartSectionData>[];
     final entries = spendingMap.entries.toList();
+    
+    // Sort by value desc
+    entries.sort((a, b) => b.value.compareTo(a.value));
+    
+    // Determine Top Category
+    String topCategory = entries.isNotEmpty ? entries.first.key : '-';
+
+    double total = entries.fold(0, (sum, item) => sum + item.value);
 
     for (int i = 0; i < entries.length; i++) {
-      final entry = entries[i];
-      pieSections.add(
-        PieChartSectionData(
-          value: entry.value,
-          color: colors[i % colors.length],
-          title: '${entry.value.toStringAsFixed(0)}',
-          radius: 60,
-          titleStyle: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+        final entry = entries[i];
+        final isTop = i == 0;
+        final percentage = (entry.value / total * 100).toStringAsFixed(0);
+        
+        pieSections.add(
+          PieChartSectionData(
+            value: entry.value,
+            color: _getCategoryColor(entry.key),
+            title: '$percentage%',
+            radius: isTop ? 25 : 20, // Thin ring
+            titleStyle: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: Colors.transparent, // Hide on chart
+            ),
+            showTitle: false,
           ),
-        ),
-      );
+        );
     }
 
-    return Column(
+    return Stack(
+      alignment: Alignment.center,
       children: [
         SizedBox(
-          height: 250,
+          height: 180,
           child: PieChart(
-            PieChartData(sections: pieSections),
+            PieChartData(
+              sections: pieSections,
+              centerSpaceRadius: 60,
+              sectionsSpace: 2,
+            ),
           ),
         ),
-        const SizedBox(height: 16),
-        // Legend
         Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: entries.asMap().entries.map((e) {
-            final index = e.key;
-            final entry = e.value;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  Container(
-                    width: 16,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: colors[index % colors.length],
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(entry.key),
-                  ),
-                  Text(
-                    'RM ${entry.value.toStringAsFixed(2)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-        ),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+             const Text('Top', style: TextStyle(color: Colors.grey, fontSize: 12)),
+             Text(
+               topCategory,
+               style: const TextStyle(
+                 fontWeight: FontWeight.bold,
+                 fontSize: 16,
+                 color: Colors.black87
+               ),
+             ),
+          ],
+        )
       ],
     );
+  }
+
+  Widget _buildBreakdownList(Map<String, double> spendingMap) {
+     final entries = spendingMap.entries.toList();
+     entries.sort((a, b) => b.value.compareTo(a.value)); // Descending
+     
+     final total = entries.fold(0.0, (sum, item) => sum + item.value);
+
+     return Column(
+       children: entries.take(4).map((e) {
+         final percent = (e.value / total * 100).round();
+         return Padding(
+           padding: const EdgeInsets.symmetric(vertical: 4),
+           child: Row(
+             children: [
+               Container(
+                 width: 10, height: 10,
+                 decoration: BoxDecoration(
+                   color: _getCategoryColor(e.key),
+                   shape: BoxShape.circle,
+                 ),
+               ),
+               const SizedBox(width: 8),
+               Expanded(
+                 child: Text(e.key, style: const TextStyle(color: Colors.grey)),
+               ),
+               Text('$percent%', style: const TextStyle(fontWeight: FontWeight.bold)),
+             ],
+           ),
+         );
+       }).toList(),
+     );
   }
 
   @override
   Widget build(BuildContext context) {
     final userId = _authService.currentUser?.uid ?? '';
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FE), // Very light cool grey
       appBar: AppBar(
-        title: const Text('Outflow Dashboard'),
+        backgroundColor: Colors.white,
         elevation: 0,
+        title: Row(
+          children: [
+             Container(
+               padding: const EdgeInsets.all(4),
+               decoration: BoxDecoration(
+                 color: const Color(0xFF00796B),
+                 borderRadius: BorderRadius.circular(8),
+               ),
+               child: const Icon(Icons.wallet, color: Colors.white, size: 20),
+             ),
+             const SizedBox(width: 8),
+             const Text('Outflow', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+          ],
+        ),
         actions: [
-          PopupMenuButton(
-            itemBuilder: (ctx) => [
-              PopupMenuItem(child: const Text('Logout'), onTap: _logout),
-            ],
-          ),
+          IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none, color: Colors.grey)),
+          IconButton(onPressed: _logout, icon: const Icon(Icons.logout, color: Colors.grey)), // Changed from Profile to Logout for now
         ],
       ),
       body: StreamBuilder<List<Subscription>>(
@@ -247,289 +290,337 @@ class _DashboardScreenState extends State<DashboardScreen> {
           }
 
           if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error, size: 60, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text('Error: ${snapshot.error}'),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () => setState(() {}),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
-                  ),
-                ],
-              ),
-            );
+             return Center(child: Text('Error: ${snapshot.error}'));
           }
 
           final subscriptions = snapshot.data ?? [];
-
-          // Filter by search and category
           final filteredSubscriptions = subscriptions.where((sub) {
-            final matchesSearch = sub.name.toLowerCase().contains(
-              _searchController.text.toLowerCase(),
-            );
-            final matchesCategory =
-                _selectedCategory == 'All' || sub.category == _selectedCategory;
-            return matchesSearch && matchesCategory && sub.isActive;
+             return (_selectedCategory == 'All' || sub.category == _selectedCategory) && sub.isActive;
           }).toList();
 
-          if (subscriptions.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    'assets/images/outflow_logo.png',
-                    width: 100,
-                    height: 100,
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'No Subscriptions Yet',
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton.icon(
-                    onPressed: _navigateToAdd,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add Your First Bill'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return Column(
-            children: [
-              // Statistics Card
-              Container(
-                margin: const EdgeInsets.all(16),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.teal,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.teal.withAlpha(102),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: FutureBuilder<double>(
-                  future: _service.getTotalMonthlyCost(subscriptions),
-                  builder: (context, snapshot) {
-                    final totalCost =
-                        snapshot.data?.toStringAsFixed(2) ?? '0.00';
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Monthly Spending',
-                          style: TextStyle(color: Colors.white70, fontSize: 14),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'RM $totalCost',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${subscriptions.length} active subscription${subscriptions.length != 1 ? 's' : ''}',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-
-              // Expense Breakdown Pie Chart
-              if (subscriptions.isNotEmpty)
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 1. Total Monthly Spending Card
                 Container(
-                  margin: const EdgeInsets.all(16),
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+                    color: const Color(0xFF00796B),
+                    borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withAlpha(51),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
+                        color: const Color(0xFF00796B).withValues(alpha: 0.4),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
                       ),
                     ],
                   ),
+                  child: FutureBuilder<double>(
+                    future: _service.getTotalMonthlyCost(subscriptions),
+                    builder: (context, snapshot) {
+                      final totalCost = snapshot.data ?? 0.00;
+                      // Split integer and decimal for styling
+                      final parts = totalCost.toStringAsFixed(2).split('.');
+                      
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Total Monthly Spending',
+                                style: TextStyle(color: Colors.white70, fontSize: 14),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Row(
+                                  children: [
+                                     Icon(Icons.arrow_upward, color: Colors.white, size: 12),
+                                     SizedBox(width: 4),
+                                     Text('+12.5%', style: TextStyle(color: Colors.white, fontSize: 12)),
+                                  ],
+                                ),
+                              )
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              const Text(
+                                '\$', // Using $ as per image, but could be RM
+                                style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                parts[0],
+                                style: const TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                '.${parts[1]}',
+                                style: const TextStyle(color: Colors.white70, fontSize: 24, fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            children: [
+                               Expanded(
+                                 child: Container(
+                                   padding: const EdgeInsets.all(12),
+                                   decoration: BoxDecoration(
+                                     color: Colors.white.withValues(alpha: 0.1),
+                                     borderRadius: BorderRadius.circular(12),
+                                   ),
+                                   child: Column(
+                                     crossAxisAlignment: CrossAxisAlignment.start,
+                                     children: [
+                                       const Text('Active Subs', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                                       const SizedBox(height: 4),
+                                       Text(
+                                         '${subscriptions.length}',
+                                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                                       ),
+                                     ],
+                                   ),
+                                 ),
+                               ),
+                               const SizedBox(width: 12),
+                               Expanded(
+                                 child: Container(
+                                   padding: const EdgeInsets.all(12),
+                                   decoration: BoxDecoration(
+                                     color: Colors.white.withValues(alpha: 0.1),
+                                     borderRadius: BorderRadius.circular(12),
+                                   ),
+                                   child: const Column(
+                                     crossAxisAlignment: CrossAxisAlignment.start,
+                                     children: [
+                                       Text('Upcoming', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                                        SizedBox(height: 4),
+                                       Text(
+                                         '3', // Mock data for now, requires calculation features
+                                         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                                       ),
+                                     ],
+                                   ),
+                                 ),
+                               ),
+                            ],
+                          )
+                        ],
+                      );
+                    },
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+
+                // 2. Spending Breakdown Card
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Spending by Category',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Spending Breakdown',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      _buildExpenseChart(subscriptions),
+                      const SizedBox(height: 8),
+                      if (subscriptions.isNotEmpty)
+                        Row(
+                          children: [
+                             Expanded(
+                               flex: 3,
+                               child: _buildExpenseChart(subscriptions)
+                             ),
+                             Expanded(
+                               flex: 4,
+                               child: Padding(
+                                 padding: const EdgeInsets.only(left: 16),
+                                 child: _buildBreakdownList(_getSpendingByCategory(subscriptions)),
+                               ),
+                             ),
+                          ],
+                        )
+                      else
+                        const Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Text('No data available'),
+                        ),
                     ],
                   ),
                 ),
 
-              // Search & Filter
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
+                const SizedBox(height: 24),
+
+                // 3. Category Pills
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: _categories.map((cat) {
+                       final isSelected = _selectedCategory == cat;
+                       return Padding(
+                         padding: const EdgeInsets.only(right: 8),
+                         child: ActionChip(
+                           label: Text(cat),
+                           backgroundColor: isSelected ? const Color(0xFF00796B) : Colors.white,
+                           labelStyle: TextStyle(
+                             color: isSelected ? Colors.white : Colors.grey[600],
+                             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                           ),
+                           shape: RoundedRectangleBorder(
+                             borderRadius: BorderRadius.circular(20),
+                             side: BorderSide(color: isSelected ? Colors.transparent : Colors.grey.shade200),
+                           ),
+                           onPressed: () => setState(() => _selectedCategory = cat),
+                         ),
+                       );
+                    }).toList(),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // 4. Subscriptions List
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Search subscriptions...',
-                        prefixIcon: const Icon(Icons.search),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onChanged: (_) => setState(() {}),
+                    const Text(
+                      'Subscriptions',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 36,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _categories.length,
-                        itemBuilder: (context, index) {
-                          final category = _categories[index];
-                          final isSelected = category == _selectedCategory;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: FilterChip(
-                              label: Text(category),
-                              selected: isSelected,
-                              onSelected: (_) {
-                                setState(() => _selectedCategory = category);
-                              },
-                            ),
-                          );
-                        },
-                      ),
+                    TextButton(
+                      onPressed: () {},
+                      child: const Text('See All', style: TextStyle(color: Color(0xFF00796B))),
                     ),
                   ],
                 ),
-              ),
-
-              // Subscriptions List
-              Expanded(
-                child: filteredSubscriptions.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.search_off,
-                              size: 60,
-                              color: Colors.grey,
-                            ),
-                            const SizedBox(height: 16),
-                            const Text('No subscriptions found'),
-                          ],
+                
+                ListView.separated(
+                  physics: const NeverScrollableScrollPhysics(),
+                  shrinkWrap: true,
+                  itemCount: filteredSubscriptions.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final sub = filteredSubscriptions[index];
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey.shade100),
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(16),
+                        leading: Container(
+                           width: 50, height: 50,
+                           decoration: const BoxDecoration(
+                             color: Colors.black, // Placeholder logo bg
+                             shape: BoxShape.circle,
+                           ),
+                           alignment: Alignment.center,
+                           child: Text(
+                             sub.name[0].toUpperCase(),
+                             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                           ),
                         ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: filteredSubscriptions.length,
-                        itemBuilder: (context, index) {
-                          final sub = filteredSubscriptions[index];
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: Colors.teal.withAlpha(25),
-                                child: Text(
-                                  sub.name[0].toUpperCase(),
-                                  style: const TextStyle(
-                                    color: Colors.teal,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                        title: Text(
+                          sub.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        subtitle: Text(
+                           '${sub.period} • Next: ${DateFormat('MMM dd').format(sub.nextBillingDate)}',
+                           style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                        ),
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '\$${sub.cost.toStringAsFixed(2)}',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: _getCategoryColor(sub.category).withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(4),
                               ),
-                              title: Text(
-                                sub.name,
-                                style: const TextStyle(
+                              child: Text(
+                                sub.category,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: _getCategoryColor(sub.category).withValues(alpha: 1.0), // Full opacity for text
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${sub.category} • ${sub.period == 'month' ? 'Monthly' : 'Yearly'}',
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Next: ${DateFormat('dd MMM yyyy').format(sub.nextBillingDate)}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              trailing: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    'RM ${sub.monthlyCost.toStringAsFixed(2)}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.teal,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    sub.period == 'month' ? '/month' : '/year',
-                                    style: const TextStyle(fontSize: 10),
-                                  ),
-                                ],
-                              ),
-                              onTap: () => _navigateToEdit(sub),
-                              onLongPress: () => _deleteSubscription(sub.id!),
                             ),
-                          );
-                        },
+                          ],
+                        ),
+                        onTap: () => _navigateToEdit(sub),
+                        onLongPress: () => _deleteSubscription(sub.id!),
                       ),
-              ),
-            ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 80), // Space for FAB/BottomNav
+              ],
+            ),
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _navigateToAdd,
-        backgroundColor: Colors.teal,
-        child: const Icon(Icons.add),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: const Color(0xFF00796B),
+        unselectedItemColor: Colors.grey,
+        showSelectedLabels: true,
+        showUnselectedLabels: true,
+        currentIndex: 0, // Mock active tab
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.pie_chart_outline), label: 'Stats'),
+          BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: 'Calendar'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Settings'),
+        ],
       ),
+      floatingActionButton: Container(
+        height: 65, width: 65,
+        decoration: BoxDecoration(
+          color: const Color(0xFF00796B),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+             BoxShadow(
+               color: const Color(0xFF00796B).withValues(alpha: 0.4),
+               blurRadius: 10,
+               offset: const Offset(0, 4),
+             ),
+          ],
+        ),
+        child: IconButton(
+          icon: const Icon(Icons.add, color: Colors.white, size: 30),
+          onPressed: _navigateToAdd,
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
+    // _searchController.dispose();
     super.dispose();
   }
 }

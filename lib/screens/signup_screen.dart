@@ -296,11 +296,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  icon: Image.network(
-                    'https://www.gstatic.com/firebasejs/ui/2.0.0/images/logo_googleg.png',
-                    width: 20,
-                    height: 20,
-                  ),
+                  icon: const Icon(Icons.login, size: 20, color: Colors.blue),
                   label: const Text(
                     'Sign up with Google',
                     style: TextStyle(
